@@ -12,7 +12,7 @@ def load_solar_irradiance(lat, lon, time, var_names = ['daily_integral_of_surfac
         lat: tuple, latitude range
         lon: tuple, longitude range
         var_names: list of strings, mesurements/observations
-        grid: string, snap to nearest grid
+        grid: string, option to snap to nearest grid of the data
         product_baseurl: string, base url of the THREDDS directory
     '''
     # lat, lon grid
