@@ -1,2 +1,2 @@
 # BoM_ODC_demonstration
-Contains notebooks to demonstrate to BoM how they can use ODC and DEA for their data analysis
+Contains notebooks and scripts to demonstrate for BoM how they can use the ODC and DEA Sandbox for data loading and visualisation
