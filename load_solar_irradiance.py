@@ -5,26 +5,19 @@ from tqdm import tqdm
 # function to load solar irradiance data
 
 def load_solar_irradiance(lat, lon, time, var_names = ['daily_integral_of_surface_global_irradiance'],
-                          grid = 'nearest',product_baseurl = 'https://dapds00.nci.org.au/thredds/dodsC/rv74/satellite-products/arc/der/himawari-ahi/solar/p1d/latest'):
+                          product_baseurl = 'https://dapds00.nci.org.au/thredds/dodsC/rv74/satellite-products/arc/der/himawari-ahi/solar/p1d/latest',pixel_buffer=0.02):
     '''
     Retrive solar radiation products from THREDDS server
     Parameters:
         lat: tuple, latitude range
         lon: tuple, longitude range
         var_names: list of strings, mesurements/observations
-        grid: string, option to snap to nearest grid of the data
         product_baseurl: string, base url of the THREDDS directory
+        pixel_buffer: float, a buffer of distance in degrees applied to slicing the dataset so that it includes the boundary pixels
     '''
-    # lat, lon grid
-    if grid == 'nearest':
-        # select lat/lon range from data; snap to nearest grid
-        lat_range, lon_range = None, None
-    else:
-        # define a grid that covers the entire area of interest
-        lat_range = np.arange(np.max(np.ceil(np.array(lat)*10.+0.5)/10.-0.05), np.min(np.floor(np.array(lat)*10.-0.5)/10.+0.05)-0.05, -0.1)
-        lon_range = np.arange(np.min(np.floor(np.array(lon)*10.-0.5)/10.+0.05), np.max(np.ceil(np.array(lon)*10.+0.5)/10.-0.05)+0.05, 0.1)
     daterange = pd.date_range(time[0],time[1])
     datasets = []
+    print('loading daily observations...')
     for single_date in tqdm(daterange):
         # retrive year, month and day for directory construction
         year=str(single_date.year)
@@ -32,16 +25,10 @@ def load_solar_irradiance(lat, lon, time, var_names = ['daily_integral_of_surfac
         day=str(single_date.day).zfill(2)
         product_url='/'.join([product_baseurl,year,month,day])+'/IDE02326.'+year+month+day+'0000.nc'
         # print(product_url)
-        
         # data is loaded lazily through OPeNDAP
-        ds = xr.open_dataset(product_url)
-        if lat_range is None:
-            # select lat/lon range from data if not specified; snap to nearest grid
-            test = ds.sel(latitude=list(lat), longitude=list(lon), method='nearest')
-            lat_range = slice(test.latitude.values[0], test.latitude.values[1])
-            lon_range = slice(test.longitude.values[0], test.longitude.values[1])
-        
-        # slice before return
-        ds = ds[var_names].sel(latitude=lat_range, longitude=lon_range).compute()
-        datasets.append(ds)
+        with xr.open_dataset(product_url) as ds:      
+            # slice before return
+            ds_sliced = ds[var_names].sel(latitude=slice(lat[0],lat[1]+pixel_buffer), longitude=slice(lon[0],lon[1]+pixel_buffer)).compute()
+            datasets.append(ds_sliced)
+    print('merging datasets...')
     return xr.merge(datasets)
